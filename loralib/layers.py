@@ -172,12 +172,10 @@ class HomotopyLinearLoRA(Linear):
             nn.init.kaiming_uniform_(self.lora_B, a=math.sqrt(5))
 
     def homotopy_activation(self, x):
+        zero_part = torch.zeros_like(x)
         relu_part = F.relu(x)
-        sigmoid_part = torch.sigmoid(x)
         self.homotopy_parameter.data = torch.clamp(self.homotopy_parameter.data, 0, 1)
-        # using sigmoid to clamp the value between 0 and 1
-        # self.homotopy_parameter.data = torch.sigmoid(self.homotopy_parameter.data)
-        return self.homotopy_parameter * relu_part + (1 - self.homotopy_parameter) * sigmoid_part
+        return self.homotopy_parameter * relu_part + (1 - self.homotopy_parameter) * zero_part
 
     def forward(self, x: torch.Tensor):
         def T(w):
@@ -292,9 +290,8 @@ class MergedHomotopyLinearLoRA(MergedLinear):
             **kwargs
     ):
         super(MergedHomotopyLinearLoRA, self).__init__(in_features, out_features, **kwargs)
+        self.homotopy_parameter = nn.Parameter(torch.tensor(0.0001))
 
-    def set_homotopy_parameter(self, homotopy_parameter: float):
-        self.homotopy_parameter = homotopy_parameter
 
     def reset_parameters(self):
         nn.Linear.reset_parameters(self)
@@ -305,9 +302,10 @@ class MergedHomotopyLinearLoRA(MergedLinear):
             nn.init.kaiming_uniform_(self.lora_B, a=math.sqrt(5))
 
     def homotopy_activation(self, x):
+        zero_part = torch.zeros_like(x)
         relu_part = F.relu(x)
-        sigmoid_part = torch.sigmoid(x)
-        return self.homotopy_parameter * relu_part + (1 - self.homotopy_parameter) * sigmoid_part
+        self.homotopy_parameter.data = torch.clamp(self.homotopy_parameter.data, 0, 1)
+        return self.homotopy_parameter * relu_part + (1 - self.homotopy_parameter) * zero_part
 
     def forward(self, x: torch.Tensor):
         def T(w):
