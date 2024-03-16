@@ -300,6 +300,7 @@ class MergedHomotopyLinearLoRA(MergedLinear):
             # this is different than what is described in the paper but should not affect performance
             nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
             nn.init.kaiming_uniform_(self.lora_B, a=math.sqrt(5))
+            nn.init.zeros_(self.homotopy_parameter)
 
     def homotopy_activation(self, x):
         zero_part = torch.zeros_like(x)
