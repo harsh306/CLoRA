@@ -213,7 +213,8 @@ def train_validate(
             # print all training parameters
             print(list(model.parameters()))
             for name, param in model.named_parameters():
-                print(name, param.data, param.grad)
+                if name == "module.transformer.h.23.attn.c_attn.homotopy_parameter":
+                print(name, param.data, param.requires_grad)
 
             log_str = f'| epoch {epoch:3d} step {train_step:>8d} | { idx + 1:>6d} batches | ' \
                       f'lr {lr:.3g} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | ' \
