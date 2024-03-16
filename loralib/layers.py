@@ -161,7 +161,7 @@ class HomotopyLinearLoRA(Linear):
             **kwargs
     ):
         super(HomotopyLinearLoRA, self).__init__(in_features, out_features, **kwargs)
-        self.homotopy_parameter = nn.Parameter(torch.tensor(0.0001))
+        self.lora_homotopy_parameter = nn.Parameter(torch.tensor(0.0001))
 
     def reset_parameters(self):
         nn.Linear.reset_parameters(self)
@@ -174,8 +174,8 @@ class HomotopyLinearLoRA(Linear):
     def homotopy_activation(self, x):
         zero_part = torch.zeros_like(x)
         relu_part = F.relu(x)
-        self.homotopy_parameter.data = torch.clamp(self.homotopy_parameter.data, 0, 1)
-        return self.homotopy_parameter * relu_part + (1 - self.homotopy_parameter) * zero_part
+        self.lora_homotopy_parameter.data = torch.clamp(self.lora_homotopy_parameter.data, 0, 1)
+        return self.lora_homotopy_parameter * relu_part + (1 - self.lora_homotopy_parameter) * zero_part
 
     def forward(self, x: torch.Tensor):
         def T(w):
@@ -319,7 +319,7 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
             ).view(len(enable_lora), -1)
             self.lora_ind[enable_lora, :] = True
             self.lora_ind = self.lora_ind.view(-1)
-        self.homotopy_parameter = nn.Parameter(torch.tensor(homotopy_p), requires_grad=True)
+        self.lora_homotopy_parameter = nn.Parameter(torch.tensor(homotopy_p), requires_grad=True)
         self.reset_parameters()
         if fan_in_fan_out:
             self.weight.data = self.weight.data.transpose(0, 1)
@@ -330,7 +330,7 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
             # initialize A the same way as the default for nn.Linear and B to zero
             nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
             nn.init.zeros_(self.lora_B)
-            nn.init.zeros_(self.homotopy_parameter)
+            nn.init.zeros_(self.lora_homotopy_parameter)
 
     def zero_pad(self, x):
         result = x.new_zeros((len(self.lora_ind), *x.shape[1:]))
@@ -367,8 +367,8 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
     def homotopy_activation(self, x):
         zero_part = torch.zeros_like(x)
         linear_part = x
-        self.homotopy_parameter.data = torch.clamp(self.homotopy_parameter.data, 0, 1)
-        return self.homotopy_parameter * linear_part + (1 - self.homotopy_parameter) * zero_part
+        self.lora_homotopy_parameter.data = torch.clamp(self.lora_homotopy_parameter.data, 0, 1)
+        return self.lora_homotopy_parameter * linear_part + (1 - self.lora_homotopy_parameter) * zero_part
 
     def forward(self, x: torch.Tensor):
         def T(w):
