@@ -284,25 +284,90 @@ class MergedLinear(nn.Linear, LoRALayer):
 
 class MergedHomotopyLinearLoRA(MergedLinear):
     def __init__(
-            self,
-            in_features: int,
-            out_features: int,
-            **kwargs
+        self,
+        in_features: int,
+        out_features: int,
+        r: int = 0,
+        lora_alpha: int = 1,
+        lora_dropout: float = 0.,
+        enable_lora: List[bool] = [False],
+        fan_in_fan_out: bool = False,
+        merge_weights: bool = True,
+        **kwargs
     ):
-        super(MergedHomotopyLinearLoRA, self).__init__(in_features, out_features, **kwargs)
-        self.homotopy_parameter = nn.Parameter(torch.randn(1), requires_grad=True)
-        self.reset_parameters1()
+        nn.Linear.__init__(self, in_features, out_features, **kwargs)
+        LoRALayer.__init__(self, r=r, lora_alpha=lora_alpha, lora_dropout=lora_dropout,
+                           merge_weights=merge_weights)
+        assert out_features % len(enable_lora) == 0, \
+            'The length of enable_lora must divide out_features'
+        self.enable_lora = enable_lora
+        self.fan_in_fan_out = fan_in_fan_out
+        # Actual trainable parameters
+        if r > 0 and any(enable_lora):
+            self.lora_A = nn.Parameter(
+                self.weight.new_zeros((r * sum(enable_lora), in_features)))
+            self.lora_B = nn.Parameter(
+                self.weight.new_zeros((out_features // len(enable_lora) * sum(enable_lora), r))
+            ) # weights for Conv1D with groups=sum(enable_lora)
+            self.homotopy_parameter = nn.Parameter(torch.tensor(0.0001))
+            self.scaling = self.lora_alpha / self.r
+            # Freezing the pre-trained weight matrix
+            self.weight.requires_grad = False
+            # Compute the indices
+            self.lora_ind = self.weight.new_zeros(
+                (out_features, ), dtype=torch.bool
+            ).view(len(enable_lora), -1)
+            self.lora_ind[enable_lora, :] = True
+            self.lora_ind = self.lora_ind.view(-1)
+        self.reset_parameters()
+        if fan_in_fan_out:
+            self.weight.data = self.weight.data.transpose(0, 1)
 
-
-    def reset_parameters1(self):
+    def reset_parameters(self):
+        nn.Linear.reset_parameters(self)
         if hasattr(self, 'lora_A'):
+            # initialize A the same way as the default for nn.Linear and B to zero
+            nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+            nn.init.zeros_(self.lora_B)
             nn.init.zeros_(self.homotopy_parameter)
+
+    def zero_pad(self, x):
+        result = x.new_zeros((len(self.lora_ind), *x.shape[1:]))
+        result[self.lora_ind] = x
+        return result
+
+    def merge_AB(self):
+        def T(w):
+            return w.transpose(0, 1) if self.fan_in_fan_out else w
+        delta_w = F.conv1d(
+            self.lora_A.unsqueeze(0),
+            self.lora_B.unsqueeze(-1),
+            groups=sum(self.enable_lora)
+        ).squeeze(0)
+        return T(self.zero_pad(delta_w))
+
+    def train(self, mode: bool = True):
+        def T(w):
+            return w.transpose(0, 1) if self.fan_in_fan_out else w
+        nn.Linear.train(self, mode)
+        if mode:
+            if self.merge_weights and self.merged:
+                # Make sure that the weights are not merged
+                if self.r > 0 and any(self.enable_lora):
+                    self.weight.data -= self.merge_AB() * self.scaling
+                self.merged = False
+        else:
+            if self.merge_weights and not self.merged:
+                # Merge the weights and mark it
+                if self.r > 0 and any(self.enable_lora):
+                    self.weight.data += self.merge_AB() * self.scaling
+                self.merged = True
 
     def homotopy_activation(self, x):
         zero_part = torch.zeros_like(x)
-        relu_part = F.relu(x)
+        linear_part = x
         self.homotopy_parameter.data = torch.clamp(self.homotopy_parameter.data, 0, 1)
-        return self.homotopy_parameter * relu_part + (1 - self.homotopy_parameter) * zero_part
+        return self.homotopy_parameter * linear_part + (1 - self.homotopy_parameter) * zero_part
 
     def forward(self, x: torch.Tensor):
         def T(w):
