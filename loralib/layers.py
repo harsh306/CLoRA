@@ -290,7 +290,7 @@ class MergedHomotopyLinearLoRA(MergedLinear):
             **kwargs
     ):
         super(MergedHomotopyLinearLoRA, self).__init__(in_features, out_features, **kwargs)
-        self.homotopy_parameter = nn.Parameter(torch.tensor(0.0001), requires_grad=True)
+        self.homotopy_parameter = nn.Parameter(torch.randn(1), requires_grad=True)
         self.reset_parameters1()
 
 
