@@ -310,7 +310,7 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
             self.lora_B = nn.Parameter(
                 self.weight.new_zeros((out_features // len(enable_lora) * sum(enable_lora), r))
             ) # weights for Conv1D with groups=sum(enable_lora)
-            self.homotopy_parameter = nn.Parameter(homotopy_parameter)
+            self.homotopy_parameter = nn.Parameter(torch.tensor(homotopy_parameter))
             self.scaling = self.lora_alpha / self.r
             # Freezing the pre-trained weight matrix
             self.weight.requires_grad = False
