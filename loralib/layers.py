@@ -291,15 +291,11 @@ class MergedHomotopyLinearLoRA(MergedLinear):
     ):
         super(MergedHomotopyLinearLoRA, self).__init__(in_features, out_features, **kwargs)
         self.homotopy_parameter = nn.Parameter(torch.tensor(0.0001))
+        self.reset_parameters1()
 
 
-    def reset_parameters(self):
-        nn.Linear.reset_parameters(self)
+    def reset_parameters1(self):
         if hasattr(self, 'lora_A'):
-            # initialize B the same way as the default for nn.Linear and A to zero
-            # this is different than what is described in the paper but should not affect performance
-            nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
-            nn.init.kaiming_uniform_(self.lora_B, a=math.sqrt(5))
             nn.init.zeros_(self.homotopy_parameter)
 
     def homotopy_activation(self, x):
