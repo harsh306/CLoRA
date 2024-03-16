@@ -293,7 +293,7 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
         enable_lora: List[bool] = [False],
         fan_in_fan_out: bool = False,
         merge_weights: bool = True,
-        homotopy_parameter: float = 0.0001,
+        homotopy_p: float = 0.0001,
         **kwargs
     ):
         nn.Linear.__init__(self, in_features, out_features, **kwargs)
@@ -319,7 +319,7 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
             ).view(len(enable_lora), -1)
             self.lora_ind[enable_lora, :] = True
             self.lora_ind = self.lora_ind.view(-1)
-        self.homotopy_parameter = nn.Parameter(torch.tensor(homotopy_parameter), requires_grad=True)
+        self.homotopy_parameter = nn.Parameter(torch.tensor(homotopy_p), requires_grad=True)
         self.reset_parameters()
         if fan_in_fan_out:
             self.weight.data = self.weight.data.transpose(0, 1)
