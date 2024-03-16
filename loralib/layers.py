@@ -351,7 +351,6 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
         def T(w):
             return w.transpose(0, 1) if self.fan_in_fan_out else w
         nn.Linear.train(self, mode)
-        self.homotpy_parameter.train(mode)
         if mode:
             if self.merge_weights and self.merged:
                 # Make sure that the weights are not merged
