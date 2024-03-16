@@ -209,6 +209,8 @@ def train_validate(
         if train_step % args.log_interval == 0: 
             elapsed = time.time() - log_start_time
             lr = optimizer.param_groups[0]['lr']
+            # log homotopy parameters from the model if they exist
+            print(model.named_parameters())
             log_str = f'| epoch {epoch:3d} step {train_step:>8d} | { idx + 1:>6d} batches | ' \
                       f'lr {lr:.3g} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | ' \
                       f'loss {avg_lm_loss.val:5.2f} | avg loss {avg_lm_loss.avg:5.2f} | ' \
