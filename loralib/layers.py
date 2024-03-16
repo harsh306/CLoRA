@@ -282,7 +282,7 @@ class MergedLinear(nn.Linear, LoRALayer):
                 result += self.lora_dropout(x) @ T(self.merge_AB().T) * self.scaling
             return result
 
-class MergedHomotopyLinearLoRA(MergedLinear):
+class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
     def __init__(
         self,
         in_features: int,
