@@ -310,7 +310,6 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
             self.lora_B = nn.Parameter(
                 self.weight.new_zeros((out_features // len(enable_lora) * sum(enable_lora), r))
             ) # weights for Conv1D with groups=sum(enable_lora)
-            self.homotopy_parameter = nn.Parameter(torch.tensor(homotopy_parameter))
             self.scaling = self.lora_alpha / self.r
             # Freezing the pre-trained weight matrix
             self.weight.requires_grad = False
@@ -320,6 +319,7 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
             ).view(len(enable_lora), -1)
             self.lora_ind[enable_lora, :] = True
             self.lora_ind = self.lora_ind.view(-1)
+        self.homotopy_parameter = nn.Parameter(torch.tensor(homotopy_parameter), requires_grad=True)
         self.reset_parameters()
         if fan_in_fan_out:
             self.weight.data = self.weight.data.transpose(0, 1)
@@ -351,6 +351,7 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
         def T(w):
             return w.transpose(0, 1) if self.fan_in_fan_out else w
         nn.Linear.train(self, mode)
+        self.homotpy_parameter.train(mode)
         if mode:
             if self.merge_weights and self.merged:
                 # Make sure that the weights are not merged
