@@ -211,9 +211,10 @@ def train_validate(
             lr = optimizer.param_groups[0]['lr']
             # log homotopy parameters from the model if they exist
             # print all training parameters
-            print(list(model.parameters()))
             for name, param in model.named_parameters():
-                if name == "module.transformer.h.23.attn.c_attn.homotopy_parameter":
+                if name == "module.transformer.h.23.attn.c_attn.lora_homotopy_parameter":
+                    print(name, param.data, param.requires_grad)
+                if name == "module.transformer.h.2.attn.c_attn.lora_homotopy_parameter":
                     print(name, param.data, param.requires_grad)
 
             log_str = f'| epoch {epoch:3d} step {train_step:>8d} | { idx + 1:>6d} batches | ' \
