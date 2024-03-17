@@ -301,7 +301,7 @@ class MergedLinear(nn.Linear, LoRALayer):
             return F.linear(x, T(self.weight), bias=self.bias)
         else:
             result = F.linear(x, T(self.weight), bias=self.bias)
-            if self.r > 0:
+            if self.r > 0 and any(self.enable_lora):
                 result += self.lora_dropout(x) @ T(self.merge_AB().T) * self.scaling
             return result
 
@@ -479,26 +479,24 @@ if __name__ == '__main__':
 
     y = model(x)
     print(y)
-    model.set_homotopy_parameter(0.1)
     y = model(x)
     print(y)
     print(model.r)
     print(model.lora_alpha)
     print(model.lora_dropout)
-    print(model.homotopy_parameter)
+
     model.train(mode=False)
     model.train(mode=True)
     model.reset_parameters()
-    model.set_homotopy_parameter(0.5)
     y = model(x)
-    print(model.homotopy_parameter)
+
 
     c_attn = MergedHomotopyLinearLoRA(
         2, 2 * 3,
         r=1,
         lora_alpha=1,
         lora_dropout=0.1,
-        enable_lora=[True, False, True],
+        enable_lora=[True, False, False],
         fan_in_fan_out=True,
         merge_weights=False
     )
@@ -506,4 +504,5 @@ if __name__ == '__main__':
     x = torch.randn(2, 2)
     y = c_attn(x)
     print(y)
-    print(c_attn.merge_AB())
+    #print(c_attn.merge_AB())
+    print(c_attn.lora_A.data)
