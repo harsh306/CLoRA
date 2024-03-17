@@ -398,11 +398,10 @@ class MergedHomotopyLinearLoRA(nn.Linear, LoRALayer):
             return w.transpose(0, 1) if self.fan_in_fan_out else w
         if self.merged:
             result = F.linear(x, T(self.weight), bias=self.bias)
-            result = self.homotopy_activation(result)
             return result
         else:
             result = F.linear(x, T(self.weight), bias=self.bias)
-            if self.r > 0:
+            if self.r > 0 and any(self.enable_lora):
                 result += self.lora_dropout(x) @ T(self.merge_AB().T) * self.scaling
                 result = self.homotopy_activation(result)
             return result
