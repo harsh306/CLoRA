@@ -180,6 +180,11 @@ def train_validate(
 ):
     model.train()
     avg_lm_loss = AverageMeter()
+
+    def _count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print('number of trainable parameters:', _count_parameters(model))
     print('start to train the model................', epoch)
     log_start_time = time.time()
     best_val_ppl = None
