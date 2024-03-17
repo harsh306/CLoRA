@@ -225,7 +225,14 @@ class GPT2Model(nn.Module):
         block = Block(config.n_ctx, config, scale=True)
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
-
+        self.lora_w_skip_mlp = lora.HomotopyLinearLoRA(
+            config.n_embd, config.n_embd,
+            r=config.lora_attn_dim,
+            lora_alpha=config.lora_attn_alpha,
+            lora_dropout=config.lora_dropout,
+            enable_lora=True,
+            fan_in_fan_out=True
+        )
         self.config = config
 
 
@@ -268,9 +275,17 @@ class GPT2Model(nn.Module):
             token_type_embeds = 0
         hidden_states = inputs_embeds + position_embeds + token_type_embeds
         presents = []
+        count = 0
         for block, layer_past in zip(self.h, past):
+            count += 1
             hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
             presents.append(present)
+            if count == 14:
+                skip_hidden_states_14 = hidden_states
+            if count == 18:
+                hidden_states = self.lora_w_skip_mlp(skip_hidden_states_14) + hidden_states
+
+
         hidden_states = self.ln_f(hidden_states)
         output_shape = input_shape + (hidden_states.size(-1),)
         return hidden_states.view(*output_shape), presents

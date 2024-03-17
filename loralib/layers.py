@@ -152,16 +152,37 @@ class Linear(nn.Linear, LoRALayer):
             return F.linear(x, T(self.weight), bias=self.bias)
 
 
-
-class HomotopyLinearLoRA(Linear):
+class HomotopyLinearLoRA(nn.Linear, LoRALayer):
     def __init__(
             self,
             in_features: int,
             out_features: int,
+            r: int = 0,
+            lora_alpha: int = 1,
+            lora_dropout: float = 0.,
+            homotopy_parameter: float = 0.0001,
+            fan_in_fan_out: bool = False,
+            merge_weights: bool = True, # Set this to True if the layer to replace stores weight like (fan_in, fan_out)
             **kwargs
     ):
         super(HomotopyLinearLoRA, self).__init__(in_features, out_features, **kwargs)
-        self.lora_homotopy_parameter = nn.Parameter(torch.tensor(0.0001))
+        self.lora_homotopy_parameter = nn.Parameter(torch.tensor(homotopy_parameter), requires_grad=True)
+
+        nn.Linear.__init__(self, in_features, out_features, **kwargs)
+        LoRALayer.__init__(self, r=r, lora_alpha=lora_alpha, lora_dropout=lora_dropout,
+                           merge_weights=merge_weights)
+
+        self.fan_in_fan_out = fan_in_fan_out
+        # Actual trainable parameters
+        if r > 0:
+            self.lora_A = nn.Parameter(self.weight.new_zeros((r, in_features)))
+            self.lora_B = nn.Parameter(self.weight.new_zeros((out_features, r)))
+            self.scaling = self.lora_alpha / self.r
+            # Freezing the pre-trained weight matrix
+            self.weight.requires_grad = False
+        self.reset_parameters()
+        if fan_in_fan_out:
+            self.weight.data = self.weight.data.transpose(0, 1)
 
     def reset_parameters(self):
         nn.Linear.reset_parameters(self)
@@ -170,6 +191,7 @@ class HomotopyLinearLoRA(Linear):
             # this is different than what is described in the paper but should not affect performance
             nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
             nn.init.kaiming_uniform_(self.lora_B, a=math.sqrt(5))
+            nn.init.zeros_(self.lora_homotopy_parameter)
 
     def homotopy_activation(self, x):
         zero_part = torch.zeros_like(x)
