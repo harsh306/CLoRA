@@ -96,7 +96,7 @@ class Attention(nn.Module):
             r=config.lora_attn_dim, 
             lora_alpha=config.lora_attn_alpha, 
             lora_dropout=config.lora_dropout, 
-            enable_lora=[True, False, True], 
+            enable_lora=[False, False, False],
             fan_in_fan_out=True,
             merge_weights=False
         )
@@ -195,6 +195,18 @@ class MLP(nn.Module):
         h2 = self.c_proj(h)
         return h2
 
+class Autoencoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(Autoencoder, self).__init__()
+        self.lora_encoder = nn.Linear(dim, rank)
+        self.lora_decoder = nn.Linear(rank, dim)
+        nn.init.xavier_uniform_(self.lora_encoder.weight)
+        nn.init.xavier_uniform_(self.lora_decoder.weight)
+
+    def forward(self, x):
+        return self.decoder(self.encoder(x))
+
+
 
 class Block(nn.Module):
     def __init__(self, n_ctx, config, scale=False):
@@ -225,13 +237,7 @@ class GPT2Model(nn.Module):
         block = Block(config.n_ctx, config, scale=True)
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
-        self.lora_w_skip_mlp = lora.HomotopyLinearLoRA(
-            config.n_embd, config.n_embd,
-            r=config.lora_attn_dim,
-            lora_alpha=config.lora_attn_alpha,
-            lora_dropout=config.lora_dropout,
-            fan_in_fan_out=True
-        )
+        self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.config = config
 
 
