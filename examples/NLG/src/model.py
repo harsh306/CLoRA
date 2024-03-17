@@ -230,7 +230,6 @@ class GPT2Model(nn.Module):
             r=config.lora_attn_dim,
             lora_alpha=config.lora_attn_alpha,
             lora_dropout=config.lora_dropout,
-            enable_lora=True,
             fan_in_fan_out=True
         )
         self.config = config
