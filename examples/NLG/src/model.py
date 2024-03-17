@@ -204,7 +204,7 @@ class Autoencoder(nn.Module):
         nn.init.xavier_uniform_(self.lora_decoder.weight)
 
     def forward(self, x):
-        return self.decoder(self.encoder(x))
+        return self.lora_decoder(self.lora_encoder(x))
 
 
 
