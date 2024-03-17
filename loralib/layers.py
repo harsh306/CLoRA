@@ -165,8 +165,8 @@ class HomotopyLinearLoRA(nn.Linear, LoRALayer):
             merge_weights: bool = True, # Set this to True if the layer to replace stores weight like (fan_in, fan_out)
             **kwargs
     ):
-        super(HomotopyLinearLoRA, self).__init__(in_features, out_features, **kwargs)
-        self.lora_homotopy_parameter = nn.Parameter(torch.tensor(homotopy_parameter), requires_grad=True)
+
+
 
         nn.Linear.__init__(self, in_features, out_features, **kwargs)
         LoRALayer.__init__(self, r=r, lora_alpha=lora_alpha, lora_dropout=lora_dropout,
@@ -180,6 +180,7 @@ class HomotopyLinearLoRA(nn.Linear, LoRALayer):
             self.scaling = self.lora_alpha / self.r
             # Freezing the pre-trained weight matrix
             self.weight.requires_grad = False
+        self.lora_homotopy_parameter = nn.Parameter(torch.tensor(homotopy_parameter), requires_grad=True)
         self.reset_parameters()
         if fan_in_fan_out:
             self.weight.data = self.weight.data.transpose(0, 1)
