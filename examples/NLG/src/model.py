@@ -462,6 +462,9 @@ class GPT2LMModel(nn.Module):
             if key.startswith("module.transformer."):
                 new_key = key[len("module.transformer."):]
 
+            if key.startswith("transformer."):  # Add 2 lines here to delete the prefix "transformer."
+                new_key = key[len("transformer."):]
+
             if new_key:
                 old_keys.append(key)
                 new_keys.append(new_key)

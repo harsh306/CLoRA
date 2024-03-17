@@ -82,7 +82,7 @@ python -m torch.distributed.launch --nproc_per_node=1 src/gpt2_beam.py \
     --seq_len 512 \
     --eval_len 64 \
     --model_card gpt2.md \
-    --init_checkpoint ./trained_models/GPT2_M/e2e/model.26289.pt \
+    --init_checkpoint ./trained_models/GPT2_M/e2e/model.15000.pt \
     --platform local \
     --lora_dim 4 \
     --lora_alpha 32 \
