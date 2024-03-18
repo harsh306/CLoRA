@@ -182,6 +182,7 @@ def train_validate(
     avg_lm_loss = AverageMeter()
 
     def _count_parameters(model):
+        print(list(model.parameters()))
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
     print('number of trainable parameters:', _count_parameters(model))
