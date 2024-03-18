@@ -76,15 +76,15 @@ python -m torch.distributed.launch --nproc_per_node=1 src/gpt2_ft.py \
 
 2. Generate outputs from the trained model using beam search:
 ```
-python -m torch.distributed.launch --nproc_per_node=1 src/gpt2_beam.py \
+python -m torch.distributed.launch --nproc_per_node=2 src/gpt2_beam.py \
     --data ./data/e2e/test.jsonl \
-    --batch_size 1 \
+    --batch_size 4 \
     --seq_len 512 \
     --eval_len 64 \
     --model_card gpt2.md \
-    --init_checkpoint ./trained_models/GPT2_M/e2e/model.15000.pt \
+    --init_checkpoint ./trained_models/GPT2_M/e2e/model.17525.pt \
     --platform local \
-    --lora_dim 4 \
+    --lora_dim 10 \
     --lora_alpha 32 \
     --beam 10 \
     --length_penalty 0.8 \

@@ -238,8 +238,8 @@ class GPT2Model(nn.Module):
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
-        self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
-        self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        #self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
+        #self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.config = config
 
 
@@ -292,11 +292,11 @@ class GPT2Model(nn.Module):
             if count == 14:
                 skip_hidden_states_14 = hidden_states
             if count == 18:
-                hidden_states = self.lora_w_skip_mlp(skip_hidden_states_14) + hidden_states + self.lora_w_skip_mlp3(skip_hidden_states_2)
+                hidden_states = self.lora_w_skip_mlp(skip_hidden_states_14) + hidden_states + self.lora_w_skip_mlp(skip_hidden_states_2)
             if count == 20:
                 skip_hidden_states_20 = hidden_states
             if count == 24:
-                hidden_states = self.lora_w_skip_mlp2(skip_hidden_states_20) + hidden_states + self.lora_w_skip_mlp3(skip_hidden_states_2)
+                hidden_states = self.lora_w_skip_mlp(skip_hidden_states_20) + hidden_states + self.lora_w_skip_mlp(skip_hidden_states_2)
 
 
         hidden_states = self.ln_f(hidden_states)
