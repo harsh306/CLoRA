@@ -91,15 +91,16 @@ class Attention(nn.Module):
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
-        self.c_attn = lora.MergedHomotopyLinearLoRA(
-            nx, n_state * 3, 
-            r=config.lora_attn_dim, 
-            lora_alpha=config.lora_attn_alpha, 
-            lora_dropout=config.lora_dropout, 
-            enable_lora=[False, False, False],
-            fan_in_fan_out=True,
-            merge_weights=False
-        )
+        self.c_attn = Conv1D(n_state * 3, nx)
+        # self.c_attn = lora.MergedHomotopyLinearLoRA(
+        #     nx, n_state * 3,
+        #     r=config.lora_attn_dim,
+        #     lora_alpha=config.lora_attn_alpha,
+        #     lora_dropout=config.lora_dropout,
+        #     enable_lora=[False, False, False],
+        #     fan_in_fan_out=True,
+        #     merge_weights=False
+        # )
         self.c_proj = Conv1D(n_state, nx)
 
         self.config = config
@@ -238,8 +239,8 @@ class GPT2Model(nn.Module):
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
-        #self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
-        #self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
+        #self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        #self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.config = config
 
 
