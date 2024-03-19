@@ -292,8 +292,8 @@ class GPT2Model(nn.Module):
             hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
             presents.append(present)
             if count == 24:
-                for k, v in map_hidden_states.items():
-                    hidden_states = hidden_states + self.lora_w_skip_mlp(v)
+                for k, v in map_hidden_states.items(): # skip-lowrank-RNN?
+                    hidden_states =  self.lora_w_skip_mlp(v + hidden_states)
             else:
                 map_hidden_states[count] = hidden_states
 
