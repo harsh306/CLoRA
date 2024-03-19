@@ -285,20 +285,34 @@ class GPT2Model(nn.Module):
         hidden_states = inputs_embeds + position_embeds + token_type_embeds
         presents = []
         count = 0
+
+        map_hidden_states = {}
         for block, layer_past in zip(self.h, past):
-            count += 1
-            hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
+            count+=1
+            hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
             presents.append(present)
-            if count == 2:
-                skip_hidden_states_2 = hidden_states
-            if count == 14:
-                skip_hidden_states_14 = hidden_states
-            if count == 18:
-                hidden_states = self.lora_w_skip_mlp(skip_hidden_states_14) + hidden_states + self.lora_w_skip_mlp(skip_hidden_states_2)
-            if count == 20:
-                skip_hidden_states_20 = hidden_states
             if count == 24:
-                hidden_states = self.lora_w_skip_mlp(skip_hidden_states_20) + hidden_states + self.lora_w_skip_mlp(skip_hidden_states_2)
+                print(f"count: {count} adding hidden states to lora_w_skip_mlp")
+                for k, v in map_hidden_states.items():
+                    hidden_states = hidden_states + self.lora_w_skip_mlp(v)
+            else:
+                map_hidden_states[count] = hidden_states
+
+
+        # for block, layer_past in zip(self.h, past):
+        #     count += 1
+        #     hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
+        #     presents.append(present)
+        #     if count == 2:
+        #         skip_hidden_states_2 = hidden_states
+        #     if count == 14:
+        #         skip_hidden_states_14 = hidden_states
+        #     if count == 18:
+        #         hidden_states = self.lora_w_skip_mlp(skip_hidden_states_14) + hidden_states + self.lora_w_skip_mlp(skip_hidden_states_2)
+        #     if count == 20:
+        #         skip_hidden_states_20 = hidden_states
+        #     if count == 24:
+        #         hidden_states = self.lora_w_skip_mlp(skip_hidden_states_20) + hidden_states + self.lora_w_skip_mlp(skip_hidden_states_2)
 
 
         hidden_states = self.ln_f(hidden_states)
