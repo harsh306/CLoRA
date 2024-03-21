@@ -308,23 +308,39 @@ class GPT2Model(nn.Module):
         #         map_hidden_states[count] = hidden_states
 
 
-        for block, layer_past in zip(self.h, past):
-            count += 1
-            hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
-            presents.append(present)
+        # for block, layer_past in zip(self.h, past):
+        #     count += 1
+        #     hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
+        #     presents.append(present)
+        #
+        #     if count == 14:
+        #         skip_hidden_states_14 = hidden_states
+        #     if count == 18:
+        #         hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
+        #     if count == 19:
+        #         skip_hidden_states_19 = hidden_states
+        #     if count == 20:
+        #         skip_hidden_states_20 = hidden_states
+        #     if count == 22:
+        #         hidden_states = self.ha(self.lora_w_skip_mlp3(skip_hidden_states_19)) + hidden_states
+        #     if count == 23:
+        #         hidden_states = self.ha(self.lora_w_skip_mlp2(skip_hidden_states_20)) + hidden_states
 
-            if count == 14:
-                skip_hidden_states_14 = hidden_states
-            if count == 18:
-                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
-            if count == 19:
-                skip_hidden_states_19 = hidden_states
-            if count == 20:
-                skip_hidden_states_20 = hidden_states
-            if count == 22:
-                hidden_states = self.ha(self.lora_w_skip_mlp3(skip_hidden_states_19)) + hidden_states
-            if count == 23:
-                hidden_states = self.ha(self.lora_w_skip_mlp2(skip_hidden_states_20)) + hidden_states
+        # now lets add a skip connection between every 2 blocks
+        map_hidden_states = {}
+        for block, layer_past in zip(self.h, past):
+            hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
+            count += 1
+            flag_add_skip = False
+
+            if count%2 != 0:
+                if count == 1:
+                    pass
+                else:
+                    hidden_states = self.ha(self.lora_w_skip_mlp4(map_hidden_states[f"{count-2}"])) + hidden_states
+
+                map_hidden_states[f"{count}"] = hidden_states
+
 
 
         hidden_states = self.ln_f(hidden_states)
