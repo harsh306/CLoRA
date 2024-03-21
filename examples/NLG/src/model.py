@@ -196,13 +196,22 @@ class MLP(nn.Module):
         h2 = self.c_proj(h)
         return h2
 
+class HomotopyActivation(nn.Module):
+    def __init__(self, homotopy_param = 0.1):
+        super(HomotopyActivation, self).__init__()
+        self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
+
+    def set_homotopy_param(self, homotopy_param):
+        self.lora_homotopy_param = nn.init.constant_(self.lora_homotopy_param, homotopy_param)
+    def forward(self, input):
+        return self.lora_homotopy_param * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
+
+
 class Autoencoder(nn.Module):
     def __init__(self, dim, rank):
         super(Autoencoder, self).__init__()
         self.lora_encoder = nn.Linear(dim, rank)
         self.lora_decoder = nn.Linear(rank, dim)
-        nn.init.xavier_uniform_(self.lora_encoder.weight)
-        nn.init.xavier_uniform_(self.lora_decoder.weight)
 
     def forward(self, x):
         return self.lora_decoder(self.lora_encoder(x))
@@ -242,6 +251,7 @@ class GPT2Model(nn.Module):
         self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp4 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        self.ha = HomotopyActivation()
         self.config = config
 
 
@@ -306,15 +316,15 @@ class GPT2Model(nn.Module):
             if count == 14:
                 skip_hidden_states_14 = hidden_states
             if count == 18:
-                hidden_states = self.lora_w_skip_mlp(skip_hidden_states_14) + hidden_states
+                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
             if count == 19:
                 skip_hidden_states_19 = hidden_states
             if count == 20:
                 skip_hidden_states_20 = hidden_states
             if count == 22:
-                hidden_states = self.lora_w_skip_mlp3(skip_hidden_states_19) + hidden_states
+                hidden_states = self.ha(self.lora_w_skip_mlp3(skip_hidden_states_19)) + hidden_states
             if count == 23:
-                hidden_states = self.lora_w_skip_mlp2(skip_hidden_states_20) + hidden_states
+                hidden_states = self.ha(self.lora_w_skip_mlp2(skip_hidden_states_20)) + hidden_states
 
 
         hidden_states = self.ln_f(hidden_states)
