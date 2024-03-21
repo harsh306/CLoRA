@@ -217,7 +217,7 @@ def train_validate(
             # log homotopy parameters from the model if they exist
             # print all training parameters
             for name, param in model.named_parameters():
-                if name.__contains__("lora_homotopy_parameter"):
+                if name.__contains__("lora_homotopy_param"):
                     print(name, param.data, param.requires_grad)
 
             log_str = f'| epoch {epoch:3d} step {train_step:>8d} | { idx + 1:>6d} batches | ' \
