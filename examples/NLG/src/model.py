@@ -293,6 +293,7 @@ class GPT2Model(nn.Module):
         else:
             token_type_embeds = 0
         hidden_states = inputs_embeds + position_embeds + token_type_embeds
+        print(hidden_states.size())
         presents = []
         count = 0
 
