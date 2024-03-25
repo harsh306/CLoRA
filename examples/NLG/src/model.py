@@ -212,7 +212,6 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
         self.lora_encoder = nn.Linear(dim, rank)
         self.lora_decoder = nn.Linear(rank, dim)
-
     def forward(self, x):
         return self.lora_decoder(self.lora_encoder(x))
 
@@ -250,7 +249,7 @@ class GPT2Model(nn.Module):
         # self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
-        self.lora_w_skip_mlp4 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.ha = HomotopyActivation()
         self.config = config
 
@@ -309,52 +308,52 @@ class GPT2Model(nn.Module):
         #         map_hidden_states[count] = hidden_states
 
 
-        # for block, layer_past in zip(self.h, past):
-        #     count += 1
-        #     hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
-        #     presents.append(present)
-        #
-        #     if count == 14:
-        #         skip_hidden_states_14 = hidden_states
-        #     if count == 18:
-        #         hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
-        #     if count == 19:
-        #         skip_hidden_states_19 = hidden_states
-        #     if count == 20:
-        #         skip_hidden_states_20 = hidden_states
-        #     if count == 22:
-        #         hidden_states = self.ha(self.lora_w_skip_mlp3(skip_hidden_states_19)) + hidden_states
-        #     if count == 23:
-        #         hidden_states = self.ha(self.lora_w_skip_mlp2(skip_hidden_states_20)) + hidden_states
+        for block, layer_past in zip(self.h, past):
+            count += 1
+            hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
+            presents.append(present)
+
+            if count == 14:
+                skip_hidden_states_14 = hidden_states
+            if count == 18:
+                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
+            if count == 19:
+                skip_hidden_states_19 = hidden_states
+            if count == 20:
+                skip_hidden_states_20 = hidden_states
+            if count == 22:
+                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_19)) + hidden_states
+            if count == 24:
+                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_20)) + hidden_states
 
         # now lets add a skip connection between every 2 blocks
-        map_hidden_states = {}
-        for block, layer_past in zip(self.h, past):
-            hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
-            count += 1
-
-            if count == 1 or count ==7 or count == 15 or count == 21:
-                map_hidden_states[f"{count}"] = hidden_states
-
-            # if count == 3:
-            #     hidden_states = self.ha(self.lora_w_skip_mlp(
-            #         map_hidden_states[f"{count-2}"]
-            #     )) + hidden_states
-            #
-            # if count == 9:
-            #     hidden_states = self.ha(self.lora_w_skip_mlp2(
-            #         map_hidden_states[f"{count-2}"]
-            #     )) + hidden_states
-            #
-            # if count == 17:
-            #     hidden_states = self.ha(self.lora_w_skip_mlp3(
-            #         map_hidden_states[f"{count-2}"]
-            #     )) + hidden_states
-
-            if count == 23:
-                hidden_states = self.ha(self.lora_w_skip_mlp4(
-                    map_hidden_states[f"{count-2}"]
-                )) + hidden_states
+        # map_hidden_states = {}
+        # for block, layer_past in zip(self.h, past):
+        #     hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
+        #     count += 1
+        #
+        #     if count == 1 or count ==7 or count == 15 or count == 21:
+        #         map_hidden_states[f"{count}"] = hidden_states
+        #
+        #     # if count == 3:
+        #     #     hidden_states = self.ha(self.lora_w_skip_mlp(
+        #     #         map_hidden_states[f"{count-2}"]
+        #     #     )) + hidden_states
+        #     #
+        #     # if count == 9:
+        #     #     hidden_states = self.ha(self.lora_w_skip_mlp2(
+        #     #         map_hidden_states[f"{count-2}"]
+        #     #     )) + hidden_states
+        #     #
+        #     # if count == 17:
+        #     #     hidden_states = self.ha(self.lora_w_skip_mlp3(
+        #     #         map_hidden_states[f"{count-2}"]
+        #     #     )) + hidden_states
+        #
+        #     if count == 23:
+        #         hidden_states = self.ha(self.lora_w_skip_mlp4(
+        #             map_hidden_states[f"{count-2}"]
+        #         )) + hidden_states
 
 
 
