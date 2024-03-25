@@ -250,7 +250,9 @@ class GPT2Model(nn.Module):
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
-        self.ha = HomotopyActivation()
+        self.ha1 = HomotopyActivation()
+        self.ha2 = HomotopyActivation()
+        self.ha3 = HomotopyActivation()
         self.config = config
 
 
@@ -316,15 +318,15 @@ class GPT2Model(nn.Module):
             if count == 14:
                 skip_hidden_states_14 = hidden_states
             if count == 18:
-                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
+                hidden_states = self.ha1(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
             if count == 19:
                 skip_hidden_states_19 = hidden_states
             if count == 20:
                 skip_hidden_states_20 = hidden_states
             if count == 22:
-                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_19)) + hidden_states
+                hidden_states = self.ha2(self.lora_w_skip_mlp(skip_hidden_states_19)) + hidden_states
             if count == 24:
-                hidden_states = self.ha(self.lora_w_skip_mlp(skip_hidden_states_20)) + hidden_states
+                hidden_states = self.ha3(self.lora_w_skip_mlp(skip_hidden_states_20)) + hidden_states
 
         # now lets add a skip connection between every 2 blocks
         # map_hidden_states = {}
