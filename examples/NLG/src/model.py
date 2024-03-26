@@ -206,6 +206,15 @@ class HomotopyActivation(nn.Module):
     def forward(self, input):
         return self.lora_homotopy_param * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
 
+class HomotopyLinear(nn.Module):
+    def __init__(self, in_features, homotopy_param = 0.1):
+        super(HomotopyLinear, self).__init__()
+        self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
+        self.linear_vector = nn.Parameter(torch.randn(in_features))
+
+    def forward(self, input):
+        return self.lora_homotopy_param * self.linear_vector * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
+
 
 class Autoencoder(nn.Module):
     def __init__(self, dim, rank):
@@ -250,9 +259,9 @@ class GPT2Model(nn.Module):
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
-        self.ha1 = HomotopyActivation()
-        self.ha2 = HomotopyActivation()
-        self.ha3 = HomotopyActivation()
+        self.ha1 = HomotopyLinear(config.n_embd)
+        self.ha2 = HomotopyLinear(config.n_embd)
+        self.ha3 = HomotopyLinear(config.n_embd)
         self.config = config
 
 
