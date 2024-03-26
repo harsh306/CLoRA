@@ -262,6 +262,8 @@ class GPT2Model(nn.Module):
         self.ha1 = HomotopyLinear(config.n_embd)
         self.ha2 = HomotopyLinear(config.n_embd)
         self.ha3 = HomotopyLinear(config.n_embd)
+        self.ha4 = HomotopyLinear(config.n_embd)
+        self.ha5 = HomotopyLinear(config.n_embd)
         self.config = config
 
 
@@ -324,16 +326,28 @@ class GPT2Model(nn.Module):
             hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
             presents.append(present)
 
+            if count == 3:
+                skip_hidden_states_3 = hidden_states
+            if count == 7:
+                hidden_states = self.ha4(self.lora_w_skip_mlp(skip_hidden_states_3)) + hidden_states
+
+            if count == 8:
+                skip_hidden_states_8 = hidden_states
+            if count == 12:
+                hidden_states = self.ha5(self.lora_w_skip_mlp(skip_hidden_states_8)) + hidden_states
+
             if count == 14:
                 skip_hidden_states_14 = hidden_states
             if count == 18:
                 hidden_states = self.ha1(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
+
             if count == 19:
                 skip_hidden_states_19 = hidden_states
-            if count == 20:
-                skip_hidden_states_20 = hidden_states
             if count == 22:
                 hidden_states = self.ha2(self.lora_w_skip_mlp(skip_hidden_states_19)) + hidden_states
+
+            if count == 20:
+                skip_hidden_states_20 = hidden_states
             if count == 24:
                 hidden_states = self.ha3(self.lora_w_skip_mlp(skip_hidden_states_20)) + hidden_states
 
