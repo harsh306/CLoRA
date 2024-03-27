@@ -221,6 +221,9 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
         self.lora_encoder = nn.Linear(dim, rank)
         self.lora_decoder = nn.Linear(rank, dim)
+        nn.init.zeros_(self.lora_decoder.weight)
+        nn.init.zeros_(self.lora_decoder.bias)
+
     def forward(self, x):
         return self.lora_decoder(self.lora_encoder(x))
 
