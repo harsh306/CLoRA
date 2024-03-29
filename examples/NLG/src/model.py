@@ -260,15 +260,15 @@ class GPT2Model(nn.Module):
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.lora_ln_f2 = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.lora_ln_f3 = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
-        self.lora_w_skip_mlp1 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        #self.lora_w_skip_mlp1 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
-        self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
-        self.ha1 = HomotopyLinear(config.n_embd)
-        self.ha2 = HomotopyLinear(config.n_embd)
-        self.ha3 = HomotopyLinear(config.n_embd)
-        self.ha4 = HomotopyLinear(config.n_embd)
-        self.ha5 = HomotopyLinear(config.n_embd)
+        #self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.ha1 = HomotopyLinear(config.n_embd)
+        # self.ha2 = HomotopyLinear(config.n_embd)
+        # self.ha3 = HomotopyLinear(config.n_embd)
+        # self.ha4 = HomotopyLinear(config.n_embd)
+        # self.ha5 = HomotopyLinear(config.n_embd)
         self.config = config
 
 
