@@ -258,6 +258,8 @@ class GPT2Model(nn.Module):
         block = Block(config.n_ctx, config, scale=True)
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
+        self.lora_ln_f2 = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
+        self.lora_ln_f3 = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.lora_w_skip_mlp1 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
@@ -329,30 +331,30 @@ class GPT2Model(nn.Module):
             hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
             presents.append(present)
 
-            if count == 3:
-                skip_hidden_states_3 = hidden_states
-            if count == 7:
-                hidden_states = self.ha4(self.lora_w_skip_mlp1(skip_hidden_states_3)) + hidden_states
-
-            if count == 8:
-                skip_hidden_states_8 = hidden_states
-            if count == 12:
-                hidden_states = self.ha5(self.lora_w_skip_mlp1(skip_hidden_states_8)) + hidden_states
-
-            if count == 14:
-                skip_hidden_states_14 = hidden_states
-            if count == 18:
-                hidden_states = self.ha1(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
-
-            if count == 19:
-                skip_hidden_states_19 = hidden_states
-            if count == 22:
-                hidden_states = self.ha2(self.lora_w_skip_mlp(skip_hidden_states_19)) + hidden_states
-
-            if count == 20:
-                skip_hidden_states_20 = hidden_states
-            if count == 24:
-                hidden_states = self.ha3(self.lora_w_skip_mlp(skip_hidden_states_20)) + hidden_states
+            # if count == 3:
+            #     skip_hidden_states_3 = hidden_states
+            # if count == 7:
+            #     hidden_states = self.ha4(self.lora_w_skip_mlp1(skip_hidden_states_3)) + hidden_states
+            #
+            # if count == 8:
+            #     skip_hidden_states_8 = hidden_states
+            # if count == 12:
+            #     hidden_states = self.ha5(self.lora_w_skip_mlp1(skip_hidden_states_8)) + hidden_states
+            #
+            # if count == 14:
+            #     skip_hidden_states_14 = hidden_states
+            # if count == 18:
+            #     hidden_states = self.ha1(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
+            #
+            # if count == 19:
+            #     skip_hidden_states_19 = hidden_states
+            # if count == 22:
+            #     hidden_states = self.ha2(self.lora_w_skip_mlp(skip_hidden_states_19)) + hidden_states
+            #
+            # if count == 20:
+            #     skip_hidden_states_20 = hidden_states
+            # if count == 24:
+            #     hidden_states = self.ha3(self.lora_w_skip_mlp(skip_hidden_states_20)) + hidden_states
 
         # now lets add a skip connection between every 2 blocks
         # map_hidden_states = {}
@@ -384,8 +386,7 @@ class GPT2Model(nn.Module):
         #         )) + hidden_states
 
 
-
-        hidden_states = self.ln_f(hidden_states)
+        hidden_states = self.ln_f(hidden_states) + self.lora_ln_f2(hidden_states) + self.lora_ln_f3(hidden_states)
         output_shape = input_shape + (hidden_states.size(-1),)
         return hidden_states.view(*output_shape), presents
 
