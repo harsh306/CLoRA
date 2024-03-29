@@ -207,7 +207,7 @@ class HomotopyActivation(nn.Module):
         return self.lora_homotopy_param * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
 
 class HomotopyLinear(nn.Module):
-    def __init__(self, in_features, homotopy_param = 0.1):
+    def __init__(self, in_features, homotopy_param = 0.02):
         super(HomotopyLinear, self).__init__()
         self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
         self.lora_vector = nn.Parameter(torch.randn(in_features))
@@ -264,8 +264,8 @@ class GPT2Model(nn.Module):
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         #self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
-        # self.ha1 = HomotopyLinear(config.n_embd)
-        # self.ha2 = HomotopyLinear(config.n_embd)
+        self.ha1 = HomotopyLinear(config.n_embd)
+        self.ha2 = HomotopyLinear(config.n_embd)
         # self.ha3 = HomotopyLinear(config.n_embd)
         # self.ha4 = HomotopyLinear(config.n_embd)
         # self.ha5 = HomotopyLinear(config.n_embd)
@@ -386,7 +386,7 @@ class GPT2Model(nn.Module):
         #         )) + hidden_states
 
 
-        hidden_states = self.ln_f(hidden_states) + self.lora_ln_f2(hidden_states) + self.lora_ln_f3(hidden_states)
+        hidden_states = self.ln_f(hidden_states) + self.ha1(self.lora_ln_f2(hidden_states)) + self.ha2(self.lora_ln_f3(hidden_states))
         output_shape = input_shape + (hidden_states.size(-1),)
         return hidden_states.view(*output_shape), presents
 
