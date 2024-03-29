@@ -54,14 +54,14 @@ class LayerNorm(nn.Module):
         """Construct a layernorm module in the TF style (epsilon inside the square root)."""
         super(LayerNorm, self).__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
-        self.bias = nn.Parameter(torch.zeros(hidden_size))
+        self.lora_bias = nn.Parameter(torch.zeros(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, x):
         u = x.mean(-1, keepdim=True)
         s = (x - u).pow(2).mean(-1, keepdim=True)
         x = (x - u) / torch.sqrt(s + self.variance_epsilon)
-        return self.weight * x + self.bias
+        return self.weight * x + self.lora_bias
 
 
 class Conv1D(nn.Module):
@@ -260,16 +260,16 @@ class GPT2Model(nn.Module):
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         self.lora_ln_f2 = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
 
-        #self.lora_w_skip_mlp1 = Autoencoder(config.n_embd, config.lora_attn_dim)
-        # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
-        # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
-        #self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.ha1 = HomotopyLinear(config.n_embd)
         self.ha2 = HomotopyLinear(config.n_embd)
         self.ha3 = HomotopyLinear(config.n_embd)
         self.ha4 = HomotopyLinear(config.n_embd)
         self.ha5 = HomotopyLinear(config.n_embd)
-        self.ha6 = HomotopyLinear(config.n_embd)
+        #self.ha6 = HomotopyLinear(config.n_embd)
         self.config = config
 
 
@@ -340,12 +340,12 @@ class GPT2Model(nn.Module):
             if count == 8:
                 skip_hidden_states_8 = hidden_states
             if count == 12:
-                hidden_states = self.ha5(self.lora_w_skip_mlp1(skip_hidden_states_8)) + hidden_states
+                hidden_states = self.ha5(self.lora_w_skip_mlp2(skip_hidden_states_8)) + hidden_states
 
             if count == 14:
                 skip_hidden_states_14 = hidden_states
             if count == 18:
-                hidden_states = self.ha1(self.lora_w_skip_mlp(skip_hidden_states_14)) + hidden_states
+                hidden_states = self.ha1(self.lora_w_skip_mlp3(skip_hidden_states_14)) + hidden_states
 
             if count == 19:
                 skip_hidden_states_19 = hidden_states
@@ -387,7 +387,7 @@ class GPT2Model(nn.Module):
         #         )) + hidden_states
 
 
-        hidden_states = self.ln_f(hidden_states) + self.ha6(self.lora_ln_f2(hidden_states))
+        hidden_states = self.ln_f(hidden_states) #+ self.ha6(self.lora_ln_f2(hidden_states))
         output_shape = input_shape + (hidden_states.size(-1),)
         return hidden_states.view(*output_shape), presents
 
