@@ -346,32 +346,32 @@ class GPT2Model(nn.Module):
             if count == 6:
                 skip_hidden_states_6 = hidden_states
             if count == 8:
-                hidden_states = self.ha2(self.lora_w_skip_mlp2(skip_hidden_states_6)) + hidden_states
+                hidden_states = self.ha2(self.lora_w_skip_mlp1(skip_hidden_states_6)) + hidden_states
 
             if count == 8:
                 skip_hidden_states_8 = hidden_states
             if count == 10:
-                hidden_states = self.ha3(self.lora_w_skip_mlp3(skip_hidden_states_8)) + hidden_states
+                hidden_states = self.ha3(self.lora_w_skip_mlp1(skip_hidden_states_8)) + hidden_states
 
             if count == 12:
                 skip_hidden_states_12 = hidden_states
             if count == 14:
-                hidden_states = self.ha4(self.lora_w_skip_mlp4(skip_hidden_states_12)) + hidden_states
+                hidden_states = self.ha4(self.lora_w_skip_mlp1(skip_hidden_states_12)) + hidden_states
 
             if count == 14:
                 skip_hidden_states_14 = hidden_states
             if count == 16:
-                hidden_states = self.ha5(self.lora_w_skip_mlp5(skip_hidden_states_14)) + hidden_states
+                hidden_states = self.ha5(self.lora_w_skip_mlp1(skip_hidden_states_14)) + hidden_states
 
             if count == 18:
                 skip_hidden_states_18 = hidden_states
             if count == 20:
-                hidden_states = self.ha6(self.lora_w_skip_mlp6(skip_hidden_states_18)) + hidden_states
+                hidden_states = self.ha6(self.lora_w_skip_mlp1(skip_hidden_states_18)) + hidden_states
 
             if count == 22:
                 skip_hidden_states_22 = hidden_states
             if count == 24:
-                hidden_states = self.ha7(self.lora_w_skip_mlp7(skip_hidden_states_22)) + hidden_states
+                hidden_states = self.ha7(self.lora_w_skip_mlp1(skip_hidden_states_22)) + hidden_states
 
         # now lets add a skip connection between every 2 blocks
         # map_hidden_states = {}
