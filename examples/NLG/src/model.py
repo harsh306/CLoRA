@@ -223,9 +223,10 @@ class Autoencoder(nn.Module):
         self.lora_decoder = nn.Linear(rank, dim)
         nn.init.zeros_(self.lora_decoder.weight)
         nn.init.zeros_(self.lora_decoder.bias)
+        self.lora_dropout = nn.Dropout(0.1)
 
     def forward(self, x):
-        return self.lora_decoder(self.lora_encoder(x))
+        return self.lora_decoder(self.lora_dropout(self.lora_encoder(x)))
 
 
 
@@ -266,7 +267,7 @@ class GPT2Model(nn.Module):
         self.lora_w_skip_mlp5 = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.lora_w_skip_mlp6 = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.lora_w_skip_mlp7 = Autoencoder(config.n_embd, config.lora_attn_dim)
-        #self.lora_w_skip_mlp8 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp8 = Autoencoder(config.n_embd, config.lora_attn_dim)
         self.ha1 = HomotopyLinear(config.n_embd)
         self.ha2 = HomotopyLinear(config.n_embd)
         self.ha3 = HomotopyLinear(config.n_embd)
@@ -274,7 +275,7 @@ class GPT2Model(nn.Module):
         self.ha5 = HomotopyLinear(config.n_embd)
         self.ha6 = HomotopyLinear(config.n_embd)
         self.ha7 = HomotopyLinear(config.n_embd)
-        #self.ha8 = HomotopyLinear(config.n_embd)
+        # self.ha8 = HomotopyLinear(config.n_embd)
         self.config = config
 
 
