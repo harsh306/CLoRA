@@ -223,7 +223,7 @@ class Autoencoder(nn.Module):
         self.lora_decoder = nn.Linear(rank, dim)
         nn.init.zeros_(self.lora_decoder.weight)
         nn.init.zeros_(self.lora_decoder.bias)
-        self.lora_dropout = nn.Dropout(0.1)
+        self.lora_dropout = nn.Dropout(0.3)
 
     def forward(self, x):
         return self.lora_decoder(self.lora_dropout(self.lora_encoder(x)))
