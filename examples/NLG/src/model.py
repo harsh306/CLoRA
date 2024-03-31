@@ -207,7 +207,7 @@ class HomotopyActivation(nn.Module):
         return self.lora_homotopy_param * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
 
 class HomotopyLinear(nn.Module):
-    def __init__(self, in_features, homotopy_param = 0.1):
+    def __init__(self, in_features, homotopy_param = 0.5):
         super(HomotopyLinear, self).__init__()
         self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
         self.lora_vector = nn.Parameter(torch.randn(in_features))
@@ -227,6 +227,7 @@ class Autoencoder(nn.Module):
 
     def forward(self, x):
         return self.lora_decoder(self.lora_dropout(self.lora_encoder(x)))
+
 
 
 
