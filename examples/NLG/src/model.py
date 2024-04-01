@@ -219,13 +219,19 @@ class HomotopyLinear(nn.Module):
 
 class Encoder(nn.Module):
     def __init__(self, dim, rank):
-        super(Autoencoder, self).__init__()
+        super(Encoder, self).__init__()
         self.lora_encoder = nn.Linear(dim, rank)
-        self.lora_vector = nn.Parameter(torch.ones(dim))
-        self.lora_dropout = nn.Dropout(0.05)
+        self.lora_dropout = nn.Dropout(0.1)
 
     def forward(self, x):
         return self.lora_encoder(self.lora_dropout(x)) * self.lora_vector
+
+class EncoderVector(nn.Module):
+    def __init__(self, rank):
+        super(EncoderVector, self).__init__()
+        self.lora_vector = nn.Parameter(torch.ones(rank))
+    def forward(self, x):
+        return x * self.lora_vector
 
 class Decoder(nn.Module):
     def __init__(self, dim, rank):
@@ -234,27 +240,20 @@ class Decoder(nn.Module):
 
     def forward(self, x):
         return self.lora_decoder(self.lora_dropout(x))
-#
+
+
+
 # class Autoencoder(nn.Module):
 #     def __init__(self, dim, rank):
 #         super(Autoencoder, self).__init__()
-#         self.encoder = Encoder(dim, rank)
-#         self.decoder = Decoder(dim, rank)
+#         self.lora_encoder = nn.Linear(dim, rank)
+#         self.lora_decoder = nn.Linear(rank, dim)
+#         nn.init.zeros_(self.lora_decoder.weight)
+#         nn.init.zeros_(self.lora_decoder.bias)
+#         self.lora_dropout = nn.Dropout(0.1)
 #
 #     def forward(self, x):
-#         return self.decoder(self.encoder(x))
-
-class Autoencoder(nn.Module):
-    def __init__(self, dim, rank):
-        super(Autoencoder, self).__init__()
-        self.lora_encoder = nn.Linear(dim, rank)
-        self.lora_decoder = nn.Linear(rank, dim)
-        nn.init.zeros_(self.lora_decoder.weight)
-        nn.init.zeros_(self.lora_decoder.bias)
-        self.lora_dropout = nn.Dropout(0.1)
-
-    def forward(self, x):
-        return self.lora_decoder(self.lora_dropout(self.lora_encoder(x)))
+#         return self.lora_decoder(self.lora_dropout(self.lora_encoder(x)))
 
 
 
@@ -289,7 +288,8 @@ class GPT2Model(nn.Module):
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
 
-        self.lora_w_skip_mlp1 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1e = Encoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1d = Decoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp4 = Autoencoder(config.n_embd, config.lora_attn_dim)
@@ -297,15 +297,43 @@ class GPT2Model(nn.Module):
         # self.lora_w_skip_mlp6 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp7 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp8 = Autoencoder(config.n_embd, config.lora_attn_dim)
+
         self.ha1 = HomotopyLinear(config.n_embd)
+        self.ev1 = EncoderVector(config.lora_attn_dim)
         self.ha2 = HomotopyLinear(config.n_embd)
+        self.ev2 = EncoderVector(config.lora_attn_dim)
         self.ha3 = HomotopyLinear(config.n_embd)
+        self.ev3 = EncoderVector(config.lora_attn_dim)
         self.ha4 = HomotopyLinear(config.n_embd)
+        self.ev4 = EncoderVector(config.lora_attn_dim)
         self.ha5 = HomotopyLinear(config.n_embd)
+        self.ev5 = EncoderVector(config.lora_attn_dim)
         self.ha6 = HomotopyLinear(config.n_embd)
+        self.ev6 = EncoderVector(config.lora_attn_dim)
         self.ha7 = HomotopyLinear(config.n_embd)
+        self.ev7 = EncoderVector(config.lora_attn_dim)
+        self.ha8 = HomotopyLinear(config.n_embd)
+        self.ev8 = EncoderVector(config.lora_attn_dim)
+        self.ha9 = HomotopyLinear(config.n_embd)
+        self.ev9 = EncoderVector(config.lora_attn_dim)
+        self.ha10 = HomotopyLinear(config.n_embd)
+        self.ev10 = EncoderVector(config.lora_attn_dim)
         # self.ha8 = HomotopyLinear(config.n_embd)
         self.config = config
+
+        self.func_map = {
+            4: (self.ha1, self.ev1),
+            6: (self.ha2, self.ev2),
+            8: (self.ha3, self.ev3),
+            10: (self.ha4, self.ev4),
+            12: (self.ha5, self.ev5),
+            14: (self.ha6, self.ev6),
+            16: (self.ha7, self.ev7),
+            18: (self.ha8, self.ev8),
+            20: (self.ha9, self.ev9),
+            22: (self.ha10, self.ev10),
+            24: (self.ha11, self.ev11),
+        }
 
 
     def forward(
@@ -348,7 +376,7 @@ class GPT2Model(nn.Module):
         hidden_states = inputs_embeds + position_embeds + token_type_embeds
 
         presents = []
-        count = 0
+
 
         # map_hidden_states = {}
         # for block, layer_past in zip(self.h, past):
@@ -361,76 +389,25 @@ class GPT2Model(nn.Module):
         #     else:
         #         map_hidden_states[count] = hidden_states
 
-
-        for block, layer_past in zip(self.h, past):
-            count += 1
-            hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
+        map_hidden_states = {}
+        for count, (block, layer_past) in enumerate(zip(self.h, past), 1):
+            hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
             presents.append(present)
 
-            if count == 2:
-                skip_hidden_states_2 = hidden_states
-            if count == 4:
-                hidden_states = self.ha1(self.lora_w_skip_mlp1(skip_hidden_states_2)) + hidden_states
+            if count % 2 == 0:
+                if count > 2:
+                    funcs = self.func_map.get(count, None)
+                    if funcs:
+                        ha_func, ev_func = funcs
+                        hidden_states = ha_func(
+                            self.lora_w_skip_mlp1d(
+                                ev_func(
+                                    self.lora_w_skip_mlp1e(
+                                        map_hidden_states[f"{count - 2}"]
+                            )))
+                        ) + hidden_states
 
-            if count == 6:
-                skip_hidden_states_6 = hidden_states
-            if count == 8:
-                hidden_states = self.ha2(self.lora_w_skip_mlp1(skip_hidden_states_6)) + hidden_states
-
-            if count == 8:
-                skip_hidden_states_8 = hidden_states
-            if count == 10:
-                hidden_states = self.ha3(self.lora_w_skip_mlp1(skip_hidden_states_8)) + hidden_states
-
-            if count == 12:
-                skip_hidden_states_12 = hidden_states
-            if count == 14:
-                hidden_states = self.ha4(self.lora_w_skip_mlp1(skip_hidden_states_12)) + hidden_states
-
-            if count == 14:
-                skip_hidden_states_14 = hidden_states
-            if count == 16:
-                hidden_states = self.ha5(self.lora_w_skip_mlp1(skip_hidden_states_14)) + hidden_states
-
-            if count == 18:
-                skip_hidden_states_18 = hidden_states
-            if count == 20:
-                hidden_states = self.ha6(self.lora_w_skip_mlp1(skip_hidden_states_18)) + hidden_states
-
-            if count == 22:
-                skip_hidden_states_22 = hidden_states
-            if count == 24:
-                hidden_states = self.ha7(self.lora_w_skip_mlp1(skip_hidden_states_22)) + hidden_states
-
-        # now lets add a skip connection between every 2 blocks
-        # map_hidden_states = {}
-        # for block, layer_past in zip(self.h, past):
-        #     hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
-        #     count += 1
-        #
-        #     if count == 1 or count ==7 or count == 15 or count == 21:
-        #         map_hidden_states[f"{count}"] = hidden_states
-        #
-        #     # if count == 3:
-        #     #     hidden_states = self.ha(self.lora_w_skip_mlp(
-        #     #         map_hidden_states[f"{count-2}"]
-        #     #     )) + hidden_states
-        #     #
-        #     # if count == 9:
-        #     #     hidden_states = self.ha(self.lora_w_skip_mlp2(
-        #     #         map_hidden_states[f"{count-2}"]
-        #     #     )) + hidden_states
-        #     #
-        #     # if count == 17:
-        #     #     hidden_states = self.ha(self.lora_w_skip_mlp3(
-        #     #         map_hidden_states[f"{count-2}"]
-        #     #     )) + hidden_states
-        #
-        #     if count == 23:
-        #         hidden_states = self.ha(self.lora_w_skip_mlp4(
-        #             map_hidden_states[f"{count-2}"]
-        #         )) + hidden_states
-
+                map_hidden_states[f"{count}"] = hidden_states
 
         hidden_states = self.ln_f(hidden_states)
         output_shape = input_shape + (hidden_states.size(-1),)
