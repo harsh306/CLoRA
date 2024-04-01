@@ -210,7 +210,7 @@ class HomotopyLinear(nn.Module):
     def __init__(self, in_features, homotopy_param = 0.1):
         super(HomotopyLinear, self).__init__()
         self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
-        self.lora_vector = nn.Parameter(torch.zero_(in_features))
+        self.lora_vector = nn.Parameter(torch.randn(in_features))
 
     def forward(self, input):
         return self.lora_homotopy_param * self.lora_vector * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
@@ -234,15 +234,28 @@ class Decoder(nn.Module):
 
     def forward(self, x):
         return self.lora_decoder(self.lora_dropout(x))
+#
+# class Autoencoder(nn.Module):
+#     def __init__(self, dim, rank):
+#         super(Autoencoder, self).__init__()
+#         self.encoder = Encoder(dim, rank)
+#         self.decoder = Decoder(dim, rank)
+#
+#     def forward(self, x):
+#         return self.decoder(self.encoder(x))
 
 class Autoencoder(nn.Module):
     def __init__(self, dim, rank):
         super(Autoencoder, self).__init__()
-        self.encoder = Encoder(dim, rank)
-        self.decoder = Decoder(dim, rank)
+        self.lora_encoder = nn.Linear(dim, rank)
+        self.lora_decoder = nn.Linear(rank, dim)
+        nn.init.zeros_(self.lora_decoder.weight)
+        nn.init.zeros_(self.lora_decoder.bias)
+        self.lora_dropout = nn.Dropout(0.1)
 
     def forward(self, x):
-        return self.decoder(self.encoder(x))
+        return self.lora_decoder(self.lora_dropout(self.lora_encoder(x)))
+
 
 
 
