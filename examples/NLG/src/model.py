@@ -318,6 +318,8 @@ class GPT2Model(nn.Module):
         self.ev9 = EncoderVector(config.lora_attn_dim)
         self.ha10 = HomotopyLinear(config.n_embd)
         self.ev10 = EncoderVector(config.lora_attn_dim)
+        self.ha11 = HomotopyLinear(config.n_embd)
+        self.ev11 = EncoderVector(config.lora_attn_dim)
         # self.ha8 = HomotopyLinear(config.n_embd)
         self.config = config
 
