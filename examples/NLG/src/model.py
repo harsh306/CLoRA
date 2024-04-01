@@ -239,7 +239,7 @@ class Decoder(nn.Module):
         self.lora_decoder = nn.Linear(rank, dim)
 
     def forward(self, x):
-        return self.lora_decoder(self.lora_dropout(x))
+        return self.lora_decoder(x)
 
 
 
