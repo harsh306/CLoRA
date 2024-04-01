@@ -224,7 +224,7 @@ class Encoder(nn.Module):
         self.lora_dropout = nn.Dropout(0.1)
 
     def forward(self, x):
-        return self.lora_encoder(self.lora_dropout(x)) * self.lora_vector
+        return self.lora_encoder(self.lora_dropout(x))
 
 class EncoderVector(nn.Module):
     def __init__(self, rank):
