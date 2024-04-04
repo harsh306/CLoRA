@@ -237,6 +237,8 @@ class Decoder(nn.Module):
     def __init__(self, dim, rank):
         super(Decoder, self).__init__()
         self.lora_decoder = nn.Linear(rank, dim)
+        nn.init.zeros_(self.lora_decoder.weight)
+        nn.init.zeros_(self.lora_decoder.bias)
 
     def forward(self, x):
         return self.lora_decoder(x)
