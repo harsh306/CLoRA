@@ -34,7 +34,7 @@ def distributed_opt(args, model, opt, grad_acc=1):
     elif args.platform == 'philly' or args.platform == 'k8s' or args.platform == 'local':
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[args.local_rank], output_device=args.local_rank, 
-            find_unused_parameters=True, broadcast_buffers=False
+            find_unused_parameters=False, broadcast_buffers=False
         )
     return model, opt
 
