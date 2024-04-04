@@ -92,7 +92,7 @@ class Attention(nn.Module):
         self.split_size = n_state
         self.scale = scale
         # self.c_attn = Conv1D(n_state * 3, nx)
-        self.c_attn = lora.MergedHomotopyLinearLoRA(
+        self.c_attn = lora.MergedLinear(
             nx, n_state * 3,
             r=config.lora_attn_dim,
             lora_alpha=config.lora_attn_alpha,
@@ -237,8 +237,8 @@ class Decoder(nn.Module):
     def __init__(self, dim, rank):
         super(Decoder, self).__init__()
         self.lora_decoder = nn.Linear(rank, dim)
-        nn.init.zeros_(self.lora_decoder.weight)
-        nn.init.zeros_(self.lora_decoder.bias)
+        #nn.init.zeros_(self.lora_decoder.weight)
+        #nn.init.zeros_(self.lora_decoder.bias)
 
     def forward(self, x):
         return self.lora_decoder(x)
