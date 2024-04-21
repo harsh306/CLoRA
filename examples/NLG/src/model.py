@@ -216,6 +216,57 @@ class HomotopyLinear(nn.Module):
         return self.lora_homotopy_param * self.lora_vector * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
 
 
+class SparseLinear(nn.Module):
+    def __init__(self, in_features, out_features, bias=True, sparsity=1.0):
+        super(SparseLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(out_features))
+        else:
+            self.register_parameter('bias', None)
+
+        # Initialize weights and bias
+        nn.init.zeros_(self.weight)
+        if bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            nn.init.uniform_(self.bias, -bound, bound)
+        # Compute sparsity level based on desired percentage
+        num_zeros = int(sparsity * self.weight.numel())
+
+        # Create initial mask with desired sparsity level
+        self.mask = nn.Parameter(torch.ones_like(self.weight), requires_grad=False)
+        flattened_mask = self.mask.view(-1)
+        flattened_mask[:num_zeros] = 0
+        torch.randperm(flattened_mask.numel(), out=flattened_mask)
+        self.mask.data = self.mask * (self.mask > 0)
+        self.mask.requires_grad = False
+
+    def forward(self, input):
+        masked_weight = self.weight * self.mask
+        output = torch.nn.functional.linear(input, masked_weight, self.bias)
+        return output
+
+
+
+class SparseEncoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(Encoder, self).__init__()
+        self.lora_encoder = SparseLinear(dim, rank, sparsity=0.8)
+        self.lora_dropout = nn.Dropout(0.001)
+
+    def forward(self, x):
+        return self.lora_encoder(self.lora_dropout(x))
+
+class SparseDecoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(Decoder, self).__init__()
+        self.lora_decoder = SparseLinear(rank, dim, sparsity=0.8)
+
+    def forward(self, x):
+        return self.lora_decoder(x)
 
 class Encoder(nn.Module):
     def __init__(self, dim, rank):
@@ -290,8 +341,8 @@ class GPT2Model(nn.Module):
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
 
-        self.lora_w_skip_mlp1e = Encoder(config.n_embd, config.lora_attn_dim)
-        self.lora_w_skip_mlp1d = Decoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1e = SparseEncoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1d = SparseDecoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp4 = Autoencoder(config.n_embd, config.lora_attn_dim)
