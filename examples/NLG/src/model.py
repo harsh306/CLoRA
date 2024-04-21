@@ -235,6 +235,7 @@ class SparseLinear(nn.Module):
             nn.init.uniform_(self.bias, -bound, bound)
         # Compute sparsity level based on desired percentage
         num_zeros = int(sparsity * self.lora_weight.numel())
+        print(f"Sparsity level: {num_zeros} out of {self.lora_weight.numel()} parameters")
 
         # Create initial mask with desired sparsity level
         self.mask = nn.Parameter(torch.ones_like(self.lora_weight), requires_grad=False)
