@@ -91,16 +91,16 @@ class Attention(nn.Module):
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
-        # self.c_attn = Conv1D(n_state * 3, nx)
-        self.c_attn = lora.MergedLinear(
-            nx, n_state * 3,
-            r=config.lora_attn_dim,
-            lora_alpha=config.lora_attn_alpha,
-            lora_dropout=config.lora_dropout,
-            enable_lora=[True, False, True],
-            fan_in_fan_out=True,
-            merge_weights=False
-        )
+        self.c_attn = Conv1D(n_state * 3, nx)
+        # self.c_attn = lora.MergedLinear(
+        #     nx, n_state * 3,
+        #     r=config.lora_attn_dim,
+        #     lora_alpha=config.lora_attn_alpha,
+        #     lora_dropout=config.lora_dropout,
+        #     enable_lora=[True, False, True],
+        #     fan_in_fan_out=True,
+        #     merge_weights=False
+        # )
         self.c_proj = Conv1D(n_state, nx)
 
         self.config = config
