@@ -221,23 +221,23 @@ class SparseLinear(nn.Module):
         super(SparseLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
+        self.lora_weight = nn.Parameter(torch.Tensor(out_features, in_features))
         if bias:
             self.bias = nn.Parameter(torch.Tensor(out_features))
         else:
             self.register_parameter('bias', None)
 
-        # Initialize weights and bias
-        nn.init.zeros_(self.weight)
+        # Initialize lora_weights and bias
+        nn.init.zeros_(self.lora_weight)
         if bias is not None:
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.lora_weight)
             bound = 1 / math.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
         # Compute sparsity level based on desired percentage
-        num_zeros = int(sparsity * self.weight.numel())
+        num_zeros = int(sparsity * self.lora_weight.numel())
 
         # Create initial mask with desired sparsity level
-        self.mask = nn.Parameter(torch.ones_like(self.weight), requires_grad=False)
+        self.mask = nn.Parameter(torch.ones_like(self.lora_weight), requires_grad=False)
         flattened_mask = self.mask.view(-1)
         flattened_mask[:num_zeros] = 0
         torch.randperm(flattened_mask.numel(), out=flattened_mask)
@@ -245,8 +245,8 @@ class SparseLinear(nn.Module):
         self.mask.requires_grad = False
 
     def forward(self, input):
-        masked_weight = self.weight * self.mask
-        output = torch.nn.functional.linear(input, masked_weight, self.bias)
+        masked_lora_weight = self.lora_weight * self.mask
+        output = torch.nn.functional.linear(input, masked_lora_weight, self.bias)
         return output
 
 
