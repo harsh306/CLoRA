@@ -255,7 +255,7 @@ class SparseLinear(nn.Module):
 class SparseEncoder(nn.Module):
     def __init__(self, dim, rank):
         super(SparseEncoder, self).__init__()
-        self.lora_encoder = SparseLinear(dim, rank, sparsity=0.6)
+        self.lora_encoder = SparseLinear(dim, rank, sparsity=0.8)
         self.lora_dropout = nn.Dropout(0.001)
 
     def forward(self, x):
@@ -264,7 +264,7 @@ class SparseEncoder(nn.Module):
 class SparseDecoder(nn.Module):
     def __init__(self, dim, rank):
         super(SparseDecoder, self).__init__()
-        self.lora_decoder = SparseLinear(rank, dim, sparsity=0.6)
+        self.lora_decoder = SparseLinear(rank, dim, sparsity=0.8)
 
     def forward(self, x):
         return self.lora_decoder(x)
@@ -341,6 +341,7 @@ class GPT2Model(nn.Module):
         block = Block(config.n_ctx, config, scale=True)
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
+        #self.lora_input_linear = nn.Linear(config.n_embd, config.n_embd)
 
         self.lora_w_skip_mlp1e = SparseEncoder(config.n_embd, config.lora_attn_dim)
         self.lora_w_skip_mlp1d = SparseDecoder(config.n_embd, config.lora_attn_dim)
@@ -430,6 +431,8 @@ class GPT2Model(nn.Module):
         else:
             token_type_embeds = 0
         hidden_states = inputs_embeds + position_embeds + token_type_embeds
+
+        # hidden_states = hidden_states + self.lora_input_linear(hidden_states)
 
         presents = []
 
