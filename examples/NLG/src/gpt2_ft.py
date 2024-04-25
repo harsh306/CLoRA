@@ -218,7 +218,10 @@ def train_validate(
             # print all training parameters
             for name, param in model.named_parameters():
                 if name.__contains__("lora_homotopy_param"):
-                    print(name, param.data, param.requires_grad)
+                    #print(name, param.data, param.requires_grad)
+                    # save the homotopy parameters and values in file
+                    with open(os.path.join(args.work_dir, f'homotopy_params_{args.lora_dim}_{train_step}.txt'), 'a') as f:
+                        f.write(f'{train_step},{name},{param.data}\n')
 
             log_str = f'| epoch {epoch:3d} step {train_step:>8d} | { idx + 1:>6d} batches | ' \
                       f'lr {lr:.3g} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | ' \
