@@ -61,7 +61,7 @@ parser.add_argument('--init_checkpoint', default=None, help='pretrained checkpoi
 
 parser.add_argument('--fp16', action='store_true', help='train model with fp16')
 
-parser.add_argument('--log_interval', type=int, default=100, help='log interval')
+parser.add_argument('--log_interval', type=int, default=500, help='log interval')
 
 parser.add_argument('--eval_interval', type=int, default=2000, help='eval interval')
 
