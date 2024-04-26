@@ -344,8 +344,8 @@ class GPT2Model(nn.Module):
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         #self.lora_input_linear = nn.Linear(config.n_embd, config.n_embd)
 
-        self.lora_w_skip_mlp1e = Encoder(config.n_embd, config.lora_attn_dim)
-        self.lora_w_skip_mlp1d = Decoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1e = SparseEncoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1d = SparseDecoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp4 = Autoencoder(config.n_embd, config.lora_attn_dim)
