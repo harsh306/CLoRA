@@ -284,6 +284,8 @@ class REncoder(nn.Module):
         super(REncoder, self).__init__()
         self.encoder = nn.Linear(dim, rank)
         self.dropout = nn.Dropout(0.1)
+        self.encoder.weight.requires_grad = False
+        self.encoder.bias.requires_grad = False
 
     def forward(self, x):
         return self.encoder(self.dropout(x))
@@ -309,6 +311,8 @@ class RDecoder(nn.Module):
         super(RDecoder, self).__init__()
         self.decoder = nn.Linear(rank, dim)
         #nn.init.zeros_(self.lora_decoder.weight)
+        self.decoder.weight.requires_grad = False
+        self.decoder.bias.requires_grad = False
 
     def forward(self, x):
         return self.decoder(x)
