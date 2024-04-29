@@ -279,6 +279,15 @@ class Encoder(nn.Module):
     def forward(self, x):
         return self.lora_encoder(self.lora_dropout(x))
 
+class REncoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(REncoder, self).__init__()
+        self.encoder = nn.Linear(dim, rank)
+        self.dropout = nn.Dropout(0.1)
+
+    def forward(self, x):
+        return self.encoder(self.dropout(x))
+
 class EncoderVector(nn.Module):
     def __init__(self, rank):
         super(EncoderVector, self).__init__()
@@ -290,11 +299,19 @@ class Decoder(nn.Module):
     def __init__(self, dim, rank):
         super(Decoder, self).__init__()
         self.lora_decoder = nn.Linear(rank, dim)
-        #nn.init.zeros_(self.lora_decoder.weight)
-        #nn.init.zeros_(self.lora_decoder.bias)
+        nn.init.zeros_(self.lora_decoder.weight)
 
     def forward(self, x):
         return self.lora_decoder(x)
+
+class RDecoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(RDecoder, self).__init__()
+        self.decoder = nn.Linear(rank, dim)
+        #nn.init.zeros_(self.lora_decoder.weight)
+
+    def forward(self, x):
+        return self.decoder(x)
 
 
 
@@ -344,8 +361,8 @@ class GPT2Model(nn.Module):
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
         #self.lora_input_linear = nn.Linear(config.n_embd, config.n_embd)
 
-        self.lora_w_skip_mlp1e = Encoder(config.n_embd, config.lora_attn_dim)
-        self.lora_w_skip_mlp1d = Decoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1e = REncoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1d = RDecoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
         # self.lora_w_skip_mlp4 = Autoencoder(config.n_embd, config.lora_attn_dim)
