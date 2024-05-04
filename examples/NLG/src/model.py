@@ -255,7 +255,7 @@ class SparseLinear(nn.Module):
 class SparseEncoder(nn.Module):
     def __init__(self, dim, rank):
         super(SparseEncoder, self).__init__()
-        self.lora_encoder = SparseLinear(dim, rank, sparsity=0.6)
+        self.lora_encoder = SparseLinear(dim, rank, sparsity=0.8)
         self.lora_dropout = nn.Dropout(0.01)
 
     def forward(self, x):
@@ -264,7 +264,7 @@ class SparseEncoder(nn.Module):
 class SparseDecoder(nn.Module):
     def __init__(self, dim, rank):
         super(SparseDecoder, self).__init__()
-        self.lora_decoder = SparseLinear(rank, dim, sparsity=0.6)
+        self.lora_decoder = SparseLinear(rank, dim, sparsity=0.8)
         nn.init.zeros_(self.lora_decoder.lora_weight)
 
     def forward(self, x):
