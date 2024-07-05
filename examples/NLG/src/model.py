@@ -473,12 +473,13 @@ class GPT2Model(nn.Module):
         #         map_hidden_states[count] = hidden_states
 
         map_hidden_states = {}
+        k = 4 # skip decoders every k layers
         for count, (block, layer_past) in enumerate(zip(self.h, past), 1):
             hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
             presents.append(present)
 
-            if count % 2 == 0:
-                if count > 2:
+            if count % k == 0:
+                if count > k:
                     funcs = self.func_map.get(count, None)
                     if funcs:
                         ha_func, ev_func = funcs
@@ -486,7 +487,7 @@ class GPT2Model(nn.Module):
                             self.lora_w_skip_mlp1d(
                                 ev_func(
                                     self.lora_w_skip_mlp1e(
-                                        map_hidden_states[f"{count - 2}"]
+                                        map_hidden_states[f"{count - k}"]
                             )))
                         ) + hidden_states
 
