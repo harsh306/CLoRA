@@ -212,10 +212,11 @@ class HomotopyLinear(nn.Module):
         self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
         self.lora_vector = nn.Parameter(torch.zeros(in_features))
 
-    def forward_test(self, input):
-        return self.lora_homotopy_param * self.lora_vector * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
     def forward(self, input):
-        return self.lora_vector * input
+        return self.lora_homotopy_param * self.lora_vector * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
+
+    # def forward(self, input):
+    #     return self.lora_vector * input
 
 
 class SparseLinear(nn.Module):
