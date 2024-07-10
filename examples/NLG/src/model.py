@@ -474,7 +474,7 @@ class GPT2Model(nn.Module):
         #         map_hidden_states[count] = hidden_states
 
         map_hidden_states = {}
-        k = 4 # skip decoders every k layers
+        k = 6 # skip decoders every k layers
         for count, (block, layer_past) in enumerate(zip(self.h, past), 1):
             hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
             presents.append(present)
