@@ -91,15 +91,16 @@ class Attention(nn.Module):
         self.n_head = config.n_head
         self.split_size = n_state
         self.scale = scale
-        self.c_attn = lora.MergedLinear(
-            nx, n_state * 3, 
-            r=config.lora_attn_dim, 
-            lora_alpha=config.lora_attn_alpha, 
-            lora_dropout=config.lora_dropout, 
-            enable_lora=[True, False, True], 
-            fan_in_fan_out=True,
-            merge_weights=False
-        )
+        self.c_attn = Conv1D(n_state * 3, nx)
+        # self.c_attn = lora.MergedLinear(
+        #     nx, n_state * 3,
+        #     r=config.lora_attn_dim,
+        #     lora_alpha=config.lora_attn_alpha,
+        #     lora_dropout=config.lora_dropout,
+        #     enable_lora=[True, False, True],
+        #     fan_in_fan_out=True,
+        #     merge_weights=False
+        # )
         self.c_proj = Conv1D(n_state, nx)
 
         self.config = config
@@ -195,6 +196,146 @@ class MLP(nn.Module):
         h2 = self.c_proj(h)
         return h2
 
+class HomotopyActivation(nn.Module):
+    def __init__(self, homotopy_param = 0.1):
+        super(HomotopyActivation, self).__init__()
+        self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
+
+    def set_homotopy_param(self, homotopy_param):
+        self.lora_homotopy_param = nn.init.constant_(self.lora_homotopy_param, homotopy_param)
+    def forward(self, input):
+        return self.lora_homotopy_param * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
+
+class HomotopyLinear(nn.Module):
+    def __init__(self, in_features, homotopy_param = 0.1):
+        super(HomotopyLinear, self).__init__()
+        self.lora_homotopy_param = nn.Parameter(torch.tensor(homotopy_param))
+        self.lora_vector = nn.Parameter(torch.zeros(in_features))
+
+    def forward(self, input):
+        return self.lora_homotopy_param * self.lora_vector * input + (1 - self.lora_homotopy_param) * torch.zeros_like(input)
+
+    # def forward(self, input):
+    #     return self.lora_vector * input
+
+
+class SparseLinear(nn.Module):
+    def __init__(self, in_features, out_features, bias=True, sparsity=1.0):
+        super(SparseLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.lora_weight = nn.Parameter(torch.Tensor(out_features, in_features))
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(out_features))
+        else:
+            self.register_parameter('bias', None)
+
+        # Initialize lora_weights and bias
+        nn.init.zeros_(self.lora_weight)
+        if bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.lora_weight)
+            bound = 1 / math.sqrt(fan_in)
+            nn.init.uniform_(self.bias, -bound, bound)
+        # Compute sparsity level based on desired percentage
+        num_zeros = int(sparsity * self.lora_weight.numel())
+        print(f"Sparsity level: {num_zeros} out of {self.lora_weight.numel()} parameters")
+
+        # Create initial mask with desired sparsity level
+        self.mask = nn.Parameter(torch.ones_like(self.lora_weight), requires_grad=False)
+        flattened_mask = self.mask.view(-1)
+        flattened_mask[:num_zeros] = 0
+        torch.randperm(flattened_mask.numel(), out=flattened_mask)
+        self.mask.data = self.mask * (self.mask > 0)
+        self.mask.requires_grad = False
+
+    def forward(self, input):
+        masked_lora_weight = self.lora_weight * self.mask
+        output = torch.nn.functional.linear(input, masked_lora_weight, self.bias)
+        return output
+
+
+
+class SparseEncoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(SparseEncoder, self).__init__()
+        self.lora_encoder = SparseLinear(dim, rank, sparsity=0.6)
+        self.lora_dropout = nn.Dropout(0.01)
+
+    def forward(self, x):
+        return self.lora_encoder(self.lora_dropout(x))
+
+class SparseDecoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(SparseDecoder, self).__init__()
+        self.lora_decoder = SparseLinear(rank, dim, sparsity=0.6)
+        nn.init.zeros_(self.lora_decoder.lora_weight)
+
+    def forward(self, x):
+        return self.lora_decoder(x)
+
+class Encoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(Encoder, self).__init__()
+        self.lora_encoder = nn.Linear(dim, rank)
+        self.lora_dropout = nn.Dropout(0.1)
+
+    def forward(self, x):
+        return self.lora_encoder(self.lora_dropout(x))
+
+class REncoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(REncoder, self).__init__()
+        self.encoder = nn.Linear(dim, rank)
+        self.dropout = nn.Dropout(0.1)
+        self.encoder.weight.requires_grad = False
+        self.encoder.bias.requires_grad = False
+
+    def forward(self, x):
+        return self.encoder(self.dropout(x))
+
+class EncoderVector(nn.Module):
+    def __init__(self, rank):
+        super(EncoderVector, self).__init__()
+        self.lora_vector = nn.Parameter(torch.ones(rank))
+    def forward(self, x):
+        return x * self.lora_vector
+
+class Decoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(Decoder, self).__init__()
+        self.lora_decoder = nn.Linear(rank, dim)
+        nn.init.zeros_(self.lora_decoder.weight)
+
+    def forward(self, x):
+        return self.lora_decoder(x)
+
+class RDecoder(nn.Module):
+    def __init__(self, dim, rank):
+        super(RDecoder, self).__init__()
+        self.decoder = nn.Linear(rank, dim)
+        #nn.init.zeros_(self.lora_decoder.weight)
+        self.decoder.weight.requires_grad = False
+        self.decoder.bias.requires_grad = False
+
+    def forward(self, x):
+        return self.decoder(x)
+
+
+
+# class Autoencoder(nn.Module):
+#     def __init__(self, dim, rank):
+#         super(Autoencoder, self).__init__()
+#         self.lora_encoder = nn.Linear(dim, rank)
+#         self.lora_decoder = nn.Linear(rank, dim)
+#         nn.init.zeros_(self.lora_decoder.weight)
+#         nn.init.zeros_(self.lora_decoder.bias)
+#         self.lora_dropout = nn.Dropout(0.1)
+#
+#     def forward(self, x):
+#         return self.lora_decoder(self.lora_dropout(self.lora_encoder(x)))
+
+
+
 
 class Block(nn.Module):
     def __init__(self, n_ctx, config, scale=False):
@@ -225,8 +366,56 @@ class GPT2Model(nn.Module):
         block = Block(config.n_ctx, config, scale=True)
         self.h = nn.ModuleList([copy.deepcopy(block) for _ in range(config.n_layer)])
         self.ln_f = LayerNorm(config.n_embd, eps=config.layer_norm_epsilon)
+        #self.lora_input_linear = nn.Linear(config.n_embd, config.n_embd)
 
+        self.lora_w_skip_mlp1e = SparseEncoder(config.n_embd, config.lora_attn_dim)
+        self.lora_w_skip_mlp1d = SparseDecoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp2 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp3 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp4 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp5 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp6 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp7 = Autoencoder(config.n_embd, config.lora_attn_dim)
+        # self.lora_w_skip_mlp8 = Autoencoder(config.n_embd, config.lora_attn_dim)
+
+        self.ha1 = HomotopyLinear(config.n_embd)
+        self.ev1 = EncoderVector(config.lora_attn_dim)
+        self.ha2 = HomotopyLinear(config.n_embd)
+        self.ev2 = EncoderVector(config.lora_attn_dim)
+        self.ha3 = HomotopyLinear(config.n_embd)
+        self.ev3 = EncoderVector(config.lora_attn_dim)
+        self.ha4 = HomotopyLinear(config.n_embd)
+        self.ev4 = EncoderVector(config.lora_attn_dim)
+        self.ha5 = HomotopyLinear(config.n_embd)
+        self.ev5 = EncoderVector(config.lora_attn_dim)
+        self.ha6 = HomotopyLinear(config.n_embd)
+        self.ev6 = EncoderVector(config.lora_attn_dim)
+        self.ha7 = HomotopyLinear(config.n_embd)
+        self.ev7 = EncoderVector(config.lora_attn_dim)
+        self.ha8 = HomotopyLinear(config.n_embd)
+        self.ev8 = EncoderVector(config.lora_attn_dim)
+        self.ha9 = HomotopyLinear(config.n_embd)
+        self.ev9 = EncoderVector(config.lora_attn_dim)
+        self.ha10 = HomotopyLinear(config.n_embd)
+        self.ev10 = EncoderVector(config.lora_attn_dim)
+        self.ha11 = HomotopyLinear(config.n_embd)
+        self.ev11 = EncoderVector(config.lora_attn_dim)
+        # self.ha8 = HomotopyLinear(config.n_embd)
         self.config = config
+
+        self.func_map = {
+            4: (self.ha1, self.ev1),
+            6: (self.ha2, self.ev2),
+            8: (self.ha3, self.ev3),
+            10: (self.ha4, self.ev4),
+            12: (self.ha5, self.ev5),
+            14: (self.ha6, self.ev6),
+            16: (self.ha7, self.ev7),
+            18: (self.ha8, self.ev8),
+            20: (self.ha9, self.ev9),
+            22: (self.ha10, self.ev10),
+            24: (self.ha11, self.ev11),
+        }
 
 
     def forward(
@@ -267,10 +456,44 @@ class GPT2Model(nn.Module):
         else:
             token_type_embeds = 0
         hidden_states = inputs_embeds + position_embeds + token_type_embeds
+
+        # hidden_states = hidden_states + self.lora_input_linear(hidden_states)
+
         presents = []
-        for block, layer_past in zip(self.h, past):
-            hidden_states, present = block(hidden_states, layer_past = layer_past, len_past=len_past)
+
+
+        # map_hidden_states = {}
+        # for block, layer_past in zip(self.h, past):
+        #     count+=1
+        #     hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
+        #     presents.append(present)
+        #     if count == 24:
+        #         for k, v in map_hidden_states.items(): # skip-lowrank-RNN?
+        #             hidden_states =  self.lora_w_skip_mlp(v + hidden_states)
+        #     else:
+        #         map_hidden_states[count] = hidden_states
+
+        map_hidden_states = {}
+        k = 6 # skip decoders every k layers
+        for count, (block, layer_past) in enumerate(zip(self.h, past), 1):
+            hidden_states, present = block(hidden_states, layer_past=layer_past, len_past=len_past)
             presents.append(present)
+
+            if count % k == 0:
+                if count > k:
+                    funcs = self.func_map.get(count, None)
+                    if funcs:
+                        ha_func, ev_func = funcs
+                        hidden_states = ha_func(
+                            self.lora_w_skip_mlp1d(
+                                ev_func(
+                                    self.lora_w_skip_mlp1e(
+                                        map_hidden_states[f"{count - k}"]
+                            )))
+                        ) + hidden_states
+
+                map_hidden_states[f"{count}"] = hidden_states
+
         hidden_states = self.ln_f(hidden_states)
         output_shape = input_shape + (hidden_states.size(-1),)
         return hidden_states.view(*output_shape), presents
@@ -433,6 +656,9 @@ class GPT2LMModel(nn.Module):
             
             if key.startswith("module.transformer."):
                 new_key = key[len("module.transformer."):]
+
+            if key.startswith("transformer."):  # Add 2 lines here to delete the prefix "transformer."
+                new_key = key[len("transformer."):]
 
             if new_key:
                 old_keys.append(key)

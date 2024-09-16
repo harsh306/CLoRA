@@ -61,7 +61,7 @@ parser.add_argument('--init_checkpoint', default=None, help='pretrained checkpoi
 
 parser.add_argument('--fp16', action='store_true', help='train model with fp16')
 
-parser.add_argument('--log_interval', type=int, default=100, help='log interval')
+parser.add_argument('--log_interval', type=int, default=500, help='log interval')
 
 parser.add_argument('--eval_interval', type=int, default=2000, help='eval interval')
 
@@ -180,6 +180,11 @@ def train_validate(
 ):
     model.train()
     avg_lm_loss = AverageMeter()
+
+    def _count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    print('number of trainable parameters:', _count_parameters(model))
     print('start to train the model................', epoch)
     log_start_time = time.time()
     best_val_ppl = None
@@ -209,6 +214,15 @@ def train_validate(
         if train_step % args.log_interval == 0: 
             elapsed = time.time() - log_start_time
             lr = optimizer.param_groups[0]['lr']
+            # log homotopy parameters from the model if they exist
+            # print all training parameters
+            for name, param in model.named_parameters():
+                if name.__contains__("lora_homotopy_param"):
+                    #print(name, param.data, param.requires_grad)
+                    # save the homotopy parameters and values in file
+                    with open(os.path.join(args.work_dir, f'homotopy_params_{args.lora_dim}.txt'), 'a') as f:
+                        f.write(f'{train_step},{name},{param.data}\n')
+
             log_str = f'| epoch {epoch:3d} step {train_step:>8d} | { idx + 1:>6d} batches | ' \
                       f'lr {lr:.3g} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | ' \
                       f'loss {avg_lm_loss.val:5.2f} | avg loss {avg_lm_loss.avg:5.2f} | ' \

@@ -23,25 +23,23 @@ There are several directories in this repo:
 
 ## Getting Started
 
- 1. You can start with the following docker image: `nvcr.io/nvidia/pytorch:20.03-py3` on a GPU-capable machine, but any generic PyTorch image should work.
- ```
- docker run -it nvcr.io/nvidia/pytorch:20.03-py3
- ```
-
+1. Install PyTorch and other dependencies:
+     ```
+     conda create -n NLG python=3.7
+     conda activate NLG
+     pip install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f https://download.pytorch.org/whl/torch_stable.html
+     ```
+   
  2. Clone the repo and install dependencies in a virtual environment (remove sudo if running in docker container):
- ```
- sudo apt-get update
- sudo apt-get -y install git jq virtualenv
- git clone https://github.com/microsoft/LoRA.git; cd LoRA
- virtualenv -p `which python3` ./venv
- . ./venv/bin/activate
- pip install -r requirement.txt
- bash download_pretrained_checkpoints.sh
- bash create_datasets.sh
- cd ./eval
- bash download_evalscript.sh
- cd ..
- ```
+     ```
+     virtualenv -p `which python3` ./venv
+     . ./venv/bin/activate 
+     bash download_pretrained_checkpoints.sh
+     bash create_datasets.sh
+     cd ./eval
+     bash download_evalscript.sh
+     cd ..
+     ```
 
 #### Now we are ready to replicate the results in our paper.
 
@@ -78,15 +76,15 @@ python -m torch.distributed.launch --nproc_per_node=1 src/gpt2_ft.py \
 
 2. Generate outputs from the trained model using beam search:
 ```
-python -m torch.distributed.launch --nproc_per_node=1 src/gpt2_beam.py \
+python -m torch.distributed.launch --nproc_per_node=2 src/gpt2_beam.py \
     --data ./data/e2e/test.jsonl \
-    --batch_size 1 \
+    --batch_size 4 \
     --seq_len 512 \
     --eval_len 64 \
     --model_card gpt2.md \
-    --init_checkpoint ./trained_models/GPT2_M/e2e/model.26289.pt \
+    --init_checkpoint ./trained_models/GPT2_M/e2e/model.17525.pt \
     --platform local \
-    --lora_dim 4 \
+    --lora_dim 10 \
     --lora_alpha 32 \
     --beam 10 \
     --length_penalty 0.8 \
